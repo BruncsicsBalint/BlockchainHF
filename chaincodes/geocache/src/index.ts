@@ -1,8 +1,8 @@
 /* SPDX-License-Identifier: Apache-2.0 */
 
-import { CacheTransfer } from './cache-transfer'
+import { Geocache } from './geocache'
 
-export { CacheTransfer } from './cache-transfer'
+export { Geocache } from './geocache'
 
 /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
-export const contracts: any[] = [CacheTransfer]
+export const contracts: any[] = [Geocache]
