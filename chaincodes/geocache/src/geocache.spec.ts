@@ -45,6 +45,7 @@ describe('Geocache', () => {
     beforeEach(() => {
       contract = new Geocache()
       ctx = new ContextMock()
+      ctx.stub.putState.resetHistory();
     })
 
     describe('Cache', () => {
@@ -80,7 +81,7 @@ describe('Geocache', () => {
                             Buffer.from(stringify(sortKeys(mochCache)))
                         ))
                     
-                        await contract.UpdateCache(
+                        const resp: Cache = await contract.UpdateCache(
                             ctx,
                             updatedMochCache.ID,
                             updatedMochCache.Name,
@@ -95,6 +96,8 @@ describe('Geocache', () => {
                             `CACHE-${mochCache.ID}`,
                             Buffer.from(stringify(sortKeys(updatedMochCache)))
                         )).to.be.true
+
+                        expect(stringify(sortKeys(resp))).to.be.eq(stringify(sortKeys(updatedMochCache)))
                     })
 
                     it('should throw an error if not the maintainer tries to update', async () => {
@@ -248,7 +251,7 @@ describe('Geocache', () => {
                         GPSY: 789.012,
                         Report: "",
                         Pass: 'password',
-                        Maintainer: `${userID}`
+                        Maintainer: userID
                         }
                 
                     expect(ctx.stub.putState.calledOnceWithExactly(
@@ -318,7 +321,107 @@ describe('Geocache', () => {
             })
 
             describe('GetAllCaches', () => {
-                //TODO
+                    
+                const mochCache1: Cache = {
+                    ID: 'cache1',
+                    Name: 'Cache 1',
+                    Description: 'This is cache 1',
+                    GPSX: 123.456,
+                    GPSY: 789.012,
+                    Report: "",
+                    Pass: 'password',
+                    Maintainer: userID
+                }
+
+                const mochCache2: Cache = {
+                    ID: 'cache2',
+                    Name: 'Cache 2',
+                    Description: 'This is cache 2',
+                    GPSX: 123.456,
+                    GPSY: 789.012,
+                    Report: "",
+                    Pass: 'password',
+                    Maintainer: userID
+                }
+
+                const mochCache3: Cache = {
+                    ID: 'cache3',
+                    Name: 'Cache 3',
+                    Description: 'This is cache 3',
+                    GPSX: 123.456,
+                    GPSY: 789.012,
+                    Report: "",
+                    Pass: 'password',
+                    Maintainer: userID
+                }
+
+                const mochCache4: Cache = {
+                    ID: 'cache4',
+                    Name: 'Cache 4',
+                    Description: 'This is cache 4',
+                    GPSX: 123.456,
+                    GPSY: 789.012,
+                    Report: "",
+                    Pass: 'password',
+                    Maintainer: userID
+                }
+
+                it('should return all the caches', async () => {
+                    let mockIterator: any;
+
+                    mockIterator = {
+                        next: sinon.stub()
+                    };
+        
+                    mockIterator.next.onCall(0).resolves({
+                        value: { key: `CACHE-${mochCache1.ID}`, value: Buffer.from(stringify(sortKeys(mochCache1))) },
+                        done: false
+                    });
+                    mockIterator.next.onCall(1).resolves({
+                        value: { key: `CACHE-${mochCache2.ID}`, value: Buffer.from(stringify(sortKeys(mochCache2))) },
+                        done: false
+                    });
+                    mockIterator.next.onCall(2).resolves({
+                        value: { key: `CACHE-${mochCache3.ID}`, value: Buffer.from(stringify(sortKeys(mochCache3))) },
+                        done: false
+                    });
+                    mockIterator.next.onCall(3).resolves({
+                        value: { key: `CACHE-${mochCache4.ID}`, value: Buffer.from(stringify(sortKeys(mochCache4))) },
+                        done: false
+                    });
+                    mockIterator.next.onCall(4).resolves({
+                        done: true
+                    });
+
+                    ctx.stub.getStateByRange.returns(mockIterator)
+
+                    const caches = await contract.GetAllCaches(ctx);
+
+                    expect(caches.length).to.equal(4);
+
+                    expect(caches).to.deep.equal([
+                        sortKeys(mochCache1),
+                        sortKeys(mochCache2),
+                        sortKeys(mochCache3),
+                        sortKeys(mochCache4)
+                    ]);
+                })
+                
+                it('should return an empty list if there are not caches', async () => {
+                    let mockIteratorEmpty: any;
+                    mockIteratorEmpty = {
+                        next: sinon.stub()
+                    };
+                    mockIteratorEmpty.next.onCall(0).resolves({
+                        done: true
+                    });
+                    ctx.stub.getStateByRange.returns(mockIteratorEmpty)
+
+                    const caches = await contract.GetAllCaches(ctx);
+
+                    expect(caches.length).to.equal(0);
+                    expect(caches).to.deep.equal([]);
+                })
             })
 
             describe('CacheExists', () => {
@@ -389,8 +492,6 @@ describe('Geocache', () => {
                 await expect(fail()).to.eventually.be.rejectedWith(`Cache ${mochCache.ID} does not exist`)
                 })
             })
-
-            //TODO Add tests for GetAllLogs
         })
     })
 
@@ -409,20 +510,46 @@ describe('Geocache', () => {
             }
 
             let mochLog: VisitLog = {
-                ID: 'log10110',
+                ID: 'log1',
                 Trackables: [],
                 User: userID,
                 Cache: 'cache1',
-                Time: '2021-01-01T00:00:00Z'
-                //new Date().toISOString()
+                Time: "2021-01-01T00:00:00Z"
             }
 
             it('should create a new log', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`CACHE-${mochCache.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(mochCache)))
+                ));
+
+                const result: VisitLog = await contract.CreateLog(
+                    ctx,
+                    mochLog.ID,
+                    mochCache.ID,
+                    mochCache.Pass
+                )
+
+                expect(stringify(sortKeys(result))).to.be.eq(stringify(sortKeys({...mochLog, Time: result.Time})))
+
+                expect(ctx.stub.putState.calledOnceWithExactly(
+                    `LOG-${mochLog.ID}`,
+                    Buffer.from(stringify(sortKeys({...mochLog, Time: result.Time}))
+                ))).to.be.true
             })
 
             it('should throw an error if the pass is wrong', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`CACHE-${mochCache.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...mochCache, Pass: "wrongpass"})))
+                ));
+
+                const fail = () => contract.CreateLog(
+                    ctx,
+                    mochLog.ID,
+                    mochCache.ID,
+                    mochCache.Pass
+                )
+            
+                await expect(fail()).to.eventually.be.rejectedWith(`Wrong Pass!`)
             })
         
             it('should throw an error if the cache does not exists', async () => {
@@ -482,7 +609,95 @@ describe('Geocache', () => {
         })
 
         describe('GetAllLogs', () => {
-            //TODO
+
+            const mochLog1: VisitLog = {
+                ID: 'log1',
+                Trackables: [],
+                User: userID,
+                Cache: 'cache1',
+                Time: '2021-01-01T00:00:00Z'
+            }
+
+            const mochLog2: VisitLog = {
+                ID: 'log2',
+                Trackables: [],
+                User: userID,
+                Cache: 'cache2',
+                Time: '2021-01-02T00:00:00Z'
+            }
+
+            const mochLog3: VisitLog = {
+                ID: 'log3',
+                Trackables: [],
+                User: userID,
+                Cache: 'cache3',
+                Time: '2021-01-03T00:00:00Z'
+            }
+
+            const mochLog4: VisitLog = {
+                ID: 'log4',
+                Trackables: [],
+                User: userID,
+                Cache: 'cache4',
+                Time: '2021-01-04T00:00:00Z'
+            }
+
+
+            it('should return all the trackables', async () => {
+                let mockIterator: any;
+
+                mockIterator = {
+                    next: sinon.stub()
+                };
+    
+                mockIterator.next.onCall(0).resolves({
+                    value: { key: `LOG-${mochLog1.ID}`, value: Buffer.from(stringify(sortKeys(mochLog1))) },
+                    done: false
+                });
+                mockIterator.next.onCall(1).resolves({
+                    value: { key: `LOG-${mochLog2.ID}`, value: Buffer.from(stringify(sortKeys(mochLog2))) },
+                    done: false
+                });
+                mockIterator.next.onCall(2).resolves({
+                    value: { key: `LOG-${mochLog3.ID}`, value: Buffer.from(stringify(sortKeys(mochLog3))) },
+                    done: false
+                });
+                mockIterator.next.onCall(3).resolves({
+                    value: { key: `LOG-${mochLog4.ID}`, value: Buffer.from(stringify(sortKeys(mochLog4))) },
+                    done: false
+                });
+                mockIterator.next.onCall(4).resolves({
+                    done: true
+                });
+
+                ctx.stub.getStateByRange.returns(mockIterator)
+
+                const trackables = await contract.GetAllTrackables(ctx);
+
+                expect(trackables.length).to.equal(4);
+                expect(trackables).to.deep.equal([
+                    sortKeys(mochLog1),
+                    sortKeys(mochLog2),
+                    sortKeys(mochLog3),
+                    sortKeys(mochLog4)
+                ]);
+            })
+
+            it('should return an empty list if there are not logs', async () => {
+                let mockIteratorEmpty: any;
+                mockIteratorEmpty = {
+                    next: sinon.stub()
+                };
+                mockIteratorEmpty.next.onCall(0).resolves({
+                    done: true
+                });
+                ctx.stub.getStateByRange.returns(mockIteratorEmpty)
+
+                const logs = await contract.GetAllLogs(ctx);
+
+                expect(logs.length).to.equal(0);
+                expect(logs).to.deep.equal([]);
+            })
         })
 
         describe('LogExists', () => {
@@ -518,19 +733,63 @@ describe('Geocache', () => {
 
         describe('CreateTrackable', () => {
 
+            
             let mochTrackable: Trackable = {
                 ID: 'trackable1',
                 Name: 'CacheCoin',
                 Inserted: true,
                 VisitLog: 'log1'
             }
+            
+            let mochLog: VisitLog = {
+                ID: 'log1',
+                Trackables: [],
+                User: userID,
+                Cache: 'cache1',
+                Time: '2021-01-01T00:00:00Z'
+            }
 
             it('should create a new trackable', async () => {
-                // TODO
-            })
+                ctx.stub.getState.withArgs(`LOG-${mochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(mochLog)))
+                ));
 
+                
+                const resp: Trackable = await contract.CreateTrackable(
+                    ctx,
+                    mochTrackable.ID,
+                    mochLog.ID,
+                    mochTrackable.Name
+                )
+                
+                expect(stringify(sortKeys(resp))).to.be.eq(stringify(sortKeys(mochTrackable)))
+
+                expect(ctx.stub.putState.calledTwice).to.be.true
+
+                expect(ctx.stub.putState.calledWith(
+                    `TRACKABLE-${mochTrackable.ID}`,
+                    Buffer.from(stringify(sortKeys(mochTrackable))
+                ))).to.be.true
+
+                expect(ctx.stub.putState.calledWith(
+                    `LOG-${mochLog.ID}`,
+                    Buffer.from(stringify(sortKeys({...mochLog, Trackables: [`${mochTrackable.ID}-IN`]}))
+                ))).to.be.true
+            })
+            
             it('should throw an error if the log was not made by the user', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${mochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...mochLog, User: "NotTheUser"})))
+                ));
+
+                const fail = () => contract.CreateTrackable(
+                    ctx,
+                    mochTrackable.ID,
+                    mochLog.ID,
+                    mochTrackable.Name
+                )
+                
+                await expect(fail()).to.eventually.be.rejectedWith(`Visitlog is not made by the User!`)
             })
 
             it('should throw an error if the log does not exists', async () => {
@@ -589,7 +848,91 @@ describe('Geocache', () => {
         })
 
         describe('GetAllTrackables', () => {
-            //TODO
+
+            let mochTrackable1: Trackable = {
+                ID: 'trackable1',
+                Name: 'CacheCoin type 1',
+                Inserted: true,
+                VisitLog: 'log1'
+            }
+
+            let mochTrackable2: Trackable = {
+                ID: 'trackable2',
+                Name: 'CacheCoin type 2',
+                Inserted: false,
+                VisitLog: 'log1'
+            }
+
+            let mochTrackable3: Trackable = {
+                ID: 'trackable3',
+                Name: 'CacheCoin type 3',
+                Inserted: true,
+                VisitLog: 'log2'
+            }
+
+            let mochTrackable4: Trackable = {
+                ID: 'trackable4',
+                Name: 'CacheCoin type 4',
+                Inserted: false,
+                VisitLog: 'log2'
+            }
+
+            it('should return all the trackables', async () => {
+                let mockIterator: any;
+
+                mockIterator = {
+                    next: sinon.stub()
+                };
+    
+                mockIterator.next.onCall(0).resolves({
+                    value: { key: `TRACKABLE-${mochTrackable1.ID}`, value: Buffer.from(stringify(sortKeys(mochTrackable1))) },
+                    done: false
+                });
+                mockIterator.next.onCall(1).resolves({
+                    value: { key: `TRACKABLE-${mochTrackable2.ID}`, value: Buffer.from(stringify(sortKeys(mochTrackable2))) },
+                    done: false
+                });
+                mockIterator.next.onCall(2).resolves({
+                    value: { key: `TRACKABLE-${mochTrackable3.ID}`, value: Buffer.from(stringify(sortKeys(mochTrackable3))) },
+                    done: false
+                });
+                mockIterator.next.onCall(3).resolves({
+                    value: { key: `TRACKABLE-${mochTrackable4.ID}`, value: Buffer.from(stringify(sortKeys(mochTrackable4))) },
+                    done: false
+                });
+                mockIterator.next.onCall(4).resolves({
+                    done: true
+                });
+
+                ctx.stub.getStateByRange.returns(mockIterator)
+
+                const trackables = await contract.GetAllTrackables(ctx);
+
+                expect(trackables.length).to.equal(4);
+                expect(trackables).to.deep.equal([
+                    sortKeys(mochTrackable1),
+                    sortKeys(mochTrackable2),
+                    sortKeys(mochTrackable3),
+                    sortKeys(mochTrackable4)
+                ]);
+            })
+
+            it('should return an empty list if there are not trackables', async () => {
+                let mockIteratorEmpty: any;
+                mockIteratorEmpty = {
+                    next: sinon.stub()
+                };
+                mockIteratorEmpty.next.onCall(0).resolves({
+                    done: true
+                });
+                ctx.stub.getStateByRange.returns(mockIteratorEmpty)
+
+                const trackables = await contract.GetAllTrackables(ctx);
+
+                expect(trackables.length).to.equal(0);
+                expect(trackables).to.deep.equal([]);
+            })
+
         })
 
         describe('TrackableExists', () => {
@@ -621,12 +964,20 @@ describe('Geocache', () => {
 
         describe('InsertTrackable', () => {
 
-            let mochLog: VisitLog = {
+            let oldMochLog: VisitLog = {
                 ID: 'log1',
-                Trackables: [],
+                Trackables: ["trackable1-OUT"],
                 User: userID,
                 Cache: 'cache1',
                 Time: '2021-01-01T00:00:00Z'
+            }
+
+            let newMochLog: VisitLog = {
+                ID: 'log2',
+                Trackables: [],
+                User: userID,
+                Cache: 'cache2',
+                Time: '2021-02-01T00:00:00Z'
             }
 
             let mochTrackable: Trackable = {
@@ -636,84 +987,288 @@ describe('Geocache', () => {
                 VisitLog: 'log1'
             }
 
+            
             it('should insert the trackable', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(oldMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(newMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`TRACKABLE-${mochTrackable.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(mochTrackable)))
+                ))
+
+                
+                const resp: Trackable = await contract.InsertTrackable(
+                    ctx,
+                    mochTrackable.ID,
+                    newMochLog.ID
+                )
+                
+                expect(stringify(sortKeys(resp))).to.be.eq(stringify(sortKeys({...mochTrackable, Inserted: true, VisitLog: newMochLog.ID})))
+
+                expect(ctx.stub.putState.calledTwice).to.be.true
+
+                expect(ctx.stub.putState.calledWith(
+                    `TRACKABLE-${mochTrackable.ID}`,
+                    Buffer.from(stringify(sortKeys({...mochTrackable, Inserted: true, VisitLog: newMochLog.ID}))
+                ))).to.be.true
+
+                expect(ctx.stub.putState.calledWith(
+                    `LOG-${newMochLog.ID}`,
+                    Buffer.from(stringify(sortKeys({...newMochLog, Trackables: [`${mochTrackable.ID}-IN`]}))
+                ))).to.be.true
             })
 
             it('should throw an error if the trackable does not exist', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(oldMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(newMochLog)))
+                ));
+
+                const fail = () => contract.InsertTrackable(ctx, mochTrackable.ID, newMochLog.ID)
+            
+                await expect(fail()).to.eventually.be.rejectedWith(`Trackable ${mochTrackable.ID} does not exist`)
             })
 
             it('should throw an error if the log does not exist', async () => {
             
-                const fail = () => contract.InsertTrackable(ctx, mochTrackable.ID, mochLog.ID)
+                const fail = () => contract.InsertTrackable(ctx, mochTrackable.ID, newMochLog.ID)
             
-                await expect(fail()).to.eventually.be.rejectedWith(`Log ${mochLog.ID} does not exist`)
+                await expect(fail()).to.eventually.be.rejectedWith(`Log ${newMochLog.ID} does not exist`)
             })
 
             it('should throw an error if the trackable is already inserted', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(oldMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(newMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`TRACKABLE-${mochTrackable.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...mochTrackable, Inserted: true}))
+                )))
+
+                const fail = () => contract.InsertTrackable(ctx, mochTrackable.ID, newMochLog.ID)
+            
+                await expect(fail()).to.eventually.be.rejectedWith(`Trackable is already inserted!`)
             })
 
             it('should throw an error if the new log was not made by the user', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...newMochLog, User: "NotTheUser"})))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...newMochLog, User: "NotTheUser"})))
+                ));
+
+                ctx.stub.getState.withArgs(`TRACKABLE-${mochTrackable.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(mochTrackable))
+                )))
+
+                const fail = () => contract.InsertTrackable(ctx, mochTrackable.ID, newMochLog.ID)
+            
+                await expect(fail()).to.eventually.be.rejectedWith(`Visitlog is not made by the User!`)
             })
 
             it('should throw an error if the new log is made before the old log', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...newMochLog, Time: '2021-02-01T00:00:00Z'})))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(newMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`TRACKABLE-${mochTrackable.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(mochTrackable))
+                )))
+
+                const fail = () => contract.InsertTrackable(ctx, mochTrackable.ID, newMochLog.ID)
+            
+                await expect(fail()).to.eventually.be.rejectedWith(`Can not insert trackable into a log made before the current log!`)
             })
 
             it('should throw an error if the trackable is not owned by the user', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...newMochLog, User: "NotTheUser"})))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(newMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`TRACKABLE-${mochTrackable.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(mochTrackable))
+                )))
+
+                const fail = () => contract.InsertTrackable(ctx, mochTrackable.ID, newMochLog.ID)
+            
+                await expect(fail()).to.eventually.be.rejectedWith(`Trackable is not owned by the User!`)
             })
         })
 
         describe('RemoveTrackable', () => {
         
-            let mochLog: VisitLog = {
+            let oldMochLog: VisitLog = {
                 ID: 'log1',
-                Trackables: [],
+                Trackables: ["trackable1-IN"],
                 User: userID,
                 Cache: 'cache1',
                 Time: '2021-01-01T00:00:00Z'
             }
-    
+
+            let newMochLog: VisitLog = {
+                ID: 'log2',
+                Trackables: [],
+                User: userID,
+                Cache: 'cache1',
+                Time: '2021-02-01T00:00:00Z'
+            }
+
             let mochTrackable: Trackable = {
                 ID: 'trackable1',
                 Name: 'CacheCoin',
                 Inserted: true,
                 VisitLog: 'log1'
             }
+
     
             it('should remove the trackable', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(oldMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(newMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`TRACKABLE-${mochTrackable.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(mochTrackable)))
+                ))
+
+                
+                const resp: Trackable = await contract.RemoveTrackable(
+                    ctx,
+                    mochTrackable.ID,
+                    newMochLog.ID
+                )
+                
+                expect(stringify(sortKeys(resp))).to.be.eq(stringify(sortKeys({...mochTrackable, Inserted: false, VisitLog: newMochLog.ID})))
+
+                expect(ctx.stub.putState.calledTwice).to.be.true
+
+                expect(ctx.stub.putState.calledWith(
+                    `TRACKABLE-${mochTrackable.ID}`,
+                    Buffer.from(stringify(sortKeys({...mochTrackable, Inserted: false, VisitLog: newMochLog.ID}))
+                ))).to.be.true
+
+                expect(ctx.stub.putState.calledWith(
+                    `LOG-${newMochLog.ID}`,
+                    Buffer.from(stringify(sortKeys({...newMochLog, Trackables: [`${mochTrackable.ID}-OUT`]}))
+                ))).to.be.true
             })
     
             it('should throw an error if the trackable does not exist', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(oldMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(newMochLog)))
+                ));
+
+                const fail = () => contract.RemoveTrackable(ctx, mochTrackable.ID, newMochLog.ID)
+            
+                await expect(fail()).to.eventually.be.rejectedWith(`Trackable ${mochTrackable.ID} does not exist`)
             })
     
             it('should throw an error if the log does not exist', async () => {
             
-                const fail = () => contract.RemoveTrackable(ctx, mochTrackable.ID, mochLog.ID)
+                const fail = () => contract.RemoveTrackable(ctx, mochTrackable.ID, newMochLog.ID)
             
-                await expect(fail()).to.eventually.be.rejectedWith(`Log ${mochLog.ID} does not exist`)
+                await expect(fail()).to.eventually.be.rejectedWith(`Log ${newMochLog.ID} does not exist`)
             })
     
             it('should throw an error if the trackable is not inserted', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(oldMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(newMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`TRACKABLE-${mochTrackable.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...mochTrackable, Inserted: false}))
+                )))
+
+                const fail = () => contract.RemoveTrackable(ctx, mochTrackable.ID, newMochLog.ID)
+            
+                await expect(fail()).to.eventually.be.rejectedWith(`Trackable is not inserted!`)
             })
     
             it('should throw an error if the new log was not made by the user', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...oldMochLog, User: "NotTheUser"})))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...newMochLog, User: "NotTheUser"})))
+                ));
+
+                ctx.stub.getState.withArgs(`TRACKABLE-${mochTrackable.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(mochTrackable))
+                )))
+
+                const fail = () => contract.RemoveTrackable(ctx, mochTrackable.ID, newMochLog.ID)
+            
+                await expect(fail()).to.eventually.be.rejectedWith(`Visitlog is not made by the User!`)
             })
     
             it('should throw an error if the new log is made before the old log', async () => {
-                // TODO
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...oldMochLog, Time: '2021-02-01T00:00:00Z'})))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(newMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`TRACKABLE-${mochTrackable.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(mochTrackable))
+                )))
+
+                const fail = () => contract.RemoveTrackable(ctx, mochTrackable.ID, newMochLog.ID)
+            
+                await expect(fail()).to.eventually.be.rejectedWith(`Can not remove trackable from a log made before the current log!`)
             })
     
-            it('should throw an error if the trackable is not owned by the user', async () => {
-                // TODO
+            it('should throw an error if the trackable and the new log is not for the same cache', async () => {
+                ctx.stub.getState.withArgs(`LOG-${oldMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(oldMochLog)))
+                ));
+
+                ctx.stub.getState.withArgs(`LOG-${newMochLog.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys({...newMochLog, Cache: "cache2"})))
+                ));
+
+                ctx.stub.getState.withArgs(`TRACKABLE-${mochTrackable.ID}`).returns(Promise.resolve(
+                    Buffer.from(stringify(sortKeys(mochTrackable))
+                )))
+
+                const fail = () => contract.RemoveTrackable(ctx, mochTrackable.ID, newMochLog.ID)
+            
+                await expect(fail()).to.eventually.be.rejectedWith(`Trackable and Visitlog is for different caches!`)
             })
         })
     })

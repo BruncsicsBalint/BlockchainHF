@@ -180,7 +180,7 @@ export class Geocache extends Contract {
     const newVisitLog: VisitLog = this.deserializeLog(await ctx.stub.getState(this.makeLogID(LogID)))
 
     if(this.getUserID(ctx) != newVisitLog.User)
-      throw new Error(`Visitlog ${LogID} is not made by ${this.getUserID(ctx)}`)
+      throw new Error(`Visitlog is not made by the User!`)
     
     const trackable: Trackable = { ID: TrackableID, Name, Inserted: true, VisitLog: LogID }
     const newVisitLogEdited: VisitLog = {ID: newVisitLog.ID, Trackables: [...(newVisitLog.Trackables || []), `${TrackableID}-IN`], User: newVisitLog.User, Cache: newVisitLog.Cache, Time: newVisitLog.Time}
@@ -214,19 +214,19 @@ export class Geocache extends Contract {
     const trackable: Trackable = this.deserializeTrackable(await ctx.stub.getState(this.makeTrackableID(TrackableID)))
 
     if(trackable.Inserted == true)
-      throw new Error(`Trackable ${TrackableID} is already inserted`)
+      throw new Error(`Trackable is already inserted!`)
 
     const oldVisitLog: VisitLog = this.deserializeLog(await ctx.stub.getState(this.makeLogID(trackable.VisitLog)))
     const newVisitLog: VisitLog = this.deserializeLog(await ctx.stub.getState(this.makeLogID(LogID)))
 
     if((oldVisitLog.User != newVisitLog.User))
-      throw new Error(`Trackable ${TrackableID} is not owned by ${newVisitLog.User}`)
+      throw new Error(`Trackable is not owned by the User!`)
 
     if(this.getUserID(ctx) != newVisitLog.User)
-      throw new Error(`Visitlog ${LogID} is not made by ${this.getUserID(ctx)}`)
+      throw new Error(`Visitlog is not made by the User!`)
 
     if(newVisitLog.Time <= oldVisitLog.Time)
-      throw new Error(`Visitlog ${LogID} is before ${trackable.VisitLog}`)
+      throw new Error(`Can not insert trackable into a log made before the current log!`)
 
     const newTrackable: Trackable = { ID: TrackableID, Name: trackable.Name, Inserted: true, VisitLog: LogID }
     const newVisitLogEdited: VisitLog = {ID: newVisitLog.ID, Trackables: [...(newVisitLog.Trackables || []), `${TrackableID}-IN`], User: newVisitLog.User, Cache: newVisitLog.Cache, Time: newVisitLog.Time}
@@ -259,19 +259,19 @@ export class Geocache extends Contract {
     const trackable: Trackable = this.deserializeTrackable(await ctx.stub.getState(this.makeTrackableID(TrackableID)))
 
     if(trackable.Inserted != true)
-      throw new Error(`Trackable ${TrackableID} is not inserted`)
+      throw new Error(`Trackable is not inserted!`)
 
     const oldVisitLog: VisitLog = this.deserializeLog(await ctx.stub.getState(this.makeLogID(trackable.VisitLog)))
     const newVisitLog: VisitLog = this.deserializeLog(await ctx.stub.getState(this.makeLogID(LogID)))
 
     if(this.getUserID(ctx) != newVisitLog.User)
-      throw new Error(`Visitlog ${LogID} is not made by ${this.getUserID(ctx)}`)
+      throw new Error(`Visitlog is not made by the User!`)
 
     if(newVisitLog.Time <= oldVisitLog.Time)
-      throw new Error(`Visitlog ${LogID} is before ${trackable.VisitLog}`)
+      throw new Error(`Can not remove trackable from a log made before the current log!`)
 
     if(newVisitLog.Cache != oldVisitLog.Cache)
-      throw new Error(`Trackable ${TrackableID} and Visitlog ${LogID} is for different caches`)
+      throw new Error(`Trackable and Visitlog is for different caches!`)
 
     const newTrackable: Trackable = { ID: TrackableID, Name: trackable.Name, Inserted: false, VisitLog: LogID }
     const newVisitLogEdited: VisitLog = {ID: newVisitLog.ID, Trackables: [...(newVisitLog.Trackables || []), `${TrackableID}-OUT`], User: newVisitLog.User, Cache: newVisitLog.Cache, Time: newVisitLog.Time}
@@ -303,6 +303,7 @@ export class Geocache extends Contract {
 
     return results
   }
+  //ctx.stub.getStateByRange.returns(mockIterator)
 
 
   @Transaction(false)
