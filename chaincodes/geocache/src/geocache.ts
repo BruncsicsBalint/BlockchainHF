@@ -174,8 +174,8 @@ export class Geocache extends Contract {
 
   @Transaction()
   async CreateTrackable (ctx: Context, TrackableID: string, LogID: string, Name: string): Promise<Trackable> {
-    await this.assertTrackableNotExists(ctx, TrackableID)
     await this.assertLogExists(ctx, LogID)
+    await this.assertTrackableNotExists(ctx, TrackableID)
 
     const newVisitLog: VisitLog = this.deserializeLog(await ctx.stub.getState(this.makeLogID(LogID)))
 
@@ -352,13 +352,14 @@ export class Geocache extends Contract {
   }
 
   private getUserID (ctx: Context): string {
-    //TODO make user not show like \"admin\" but like admin
     const user = ctx.clientIdentity.getID()
     //ctx.clientIdentity.assertAttributeValue('role', 'admin')
-    let regex = /\/CN=([^:]+):/;
-    let match = JSON.stringify(user).match(regex);
-    if (match) {
-      return JSON.stringify(match[1])
+    //let regex = /\/CN=([^:]+):/;
+    //let match = JSON.stringify(user).match(regex);
+    const userid = JSON.stringify(user)
+    if (userid != "" || userid != null) {
+      //return JSON.stringify(match[1])
+      return userid.slice(1, -1)
     } else {
       throw new Error(`User not found!`)
     }
