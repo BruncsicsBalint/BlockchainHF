@@ -20,6 +20,12 @@ export class Geocache extends Contract {
 
   @Transaction()
   @Returns('Cache')
+  @Param('CacheID', 'string')
+  @Param('Name', 'string')
+  @Param('Description', 'string')
+  @Param('GPSX', 'number')
+  @Param('GPSY', 'number')
+  @Param('Pass', 'string')
   async UpdateCache (ctx: Context, CacheID: string, Name: string, Description: string, GPSX: number, GPSY: number, Pass: string, Report: string): Promise<Cache> {
     await this.assertCacheExists(ctx, CacheID)
 
@@ -35,6 +41,7 @@ export class Geocache extends Contract {
 
   @Transaction()
   @Returns('string')
+  @Param('CacheID', 'string')
   async DeleteCache (ctx: Context, CacheID: string): Promise<string> {
     await this.assertCacheExists(ctx, CacheID)
 
@@ -49,6 +56,7 @@ export class Geocache extends Contract {
 
   @Transaction(false)
   @Returns('string')
+  @Param('CacheID', 'string')
   async GetCachePass (ctx: Context, CacheID: string): Promise<string> {
     await this.assertCacheExists(ctx, CacheID)
 
@@ -66,6 +74,12 @@ export class Geocache extends Contract {
   // ------------- Cache -------------
   @Transaction()
   @Returns('Cache')
+  @Param('CacheID', 'string')
+  @Param('Name', 'string')
+  @Param('Description', 'string')
+  @Param('GPSX', 'number')
+  @Param('GPSY', 'number')
+  @Param('Pass', 'string')
   async CreateCache (ctx: Context, CacheID: string, Name: string, Description: string, GPSX: number, GPSY: number, Pass: string): Promise<Cache> {
     await this.assertCacheNotExists(ctx, CacheID)
     const Maintainer: string = this.getUserID(ctx)
@@ -77,7 +91,7 @@ export class Geocache extends Contract {
 
   @Transaction(false)
   @Returns('Cache')
-  @Param('ID', 'string')
+  @Param('CacheID', 'string')
   async GetCache (ctx: Context, CacheID: string): Promise<Cache> {
     await this.assertCacheExists(ctx, CacheID)
 
@@ -85,7 +99,7 @@ export class Geocache extends Contract {
   }
 
   @Transaction(false)
-  @Returns('string')
+  @Returns('Cache[]')
   async GetAllCaches (ctx: Context): Promise<Cache[]> {
     const results: Cache[] = []
 
@@ -101,6 +115,7 @@ export class Geocache extends Contract {
 
   @Transaction(false)
   @Returns('boolean')
+  @Param('CacheID', 'string')
   async CacheExists (ctx: Context, CacheID: string): Promise<boolean> {
     const data: Uint8Array = await ctx.stub.getState(this.makeCacheID(CacheID))
     return data !== undefined && data.length > 0
@@ -108,7 +123,8 @@ export class Geocache extends Contract {
 
   @Transaction()
   @Returns('Cache')
-  @Param('ID', 'string')
+  @Param('CacheID', 'string')
+  @Param('Report', 'string')
   async ReportCache (ctx: Context, CacheID: string, Report: string): Promise<Cache> {
     await this.assertCacheExists(ctx, CacheID)
 
@@ -123,6 +139,10 @@ export class Geocache extends Contract {
   // ------------- Logs -------------
 
   @Transaction()
+  @Returns('VisitLog')
+  @Param('LogID', 'string')
+  @Param('CacheID', 'string')
+  @Param('Pass', 'string')
   async CreateLog (ctx: Context, LogID: string, CacheID: string, Pass: string): Promise<VisitLog> {
     await this.assertCacheExists(ctx, CacheID)
     await this.assertLogNotExists(ctx, LogID)
@@ -142,14 +162,14 @@ export class Geocache extends Contract {
   @Transaction(false)
   @Returns('VisitLog')
   @Param('ID', 'string')
-  async GetLog (ctx: Context, ID: string): Promise<VisitLog> {
-    await this.assertLogExists(ctx, ID)
+  async GetLog (ctx: Context, LogID: string): Promise<VisitLog> {
+    await this.assertLogExists(ctx, LogID)
 
-    return this.deserializeLog(await ctx.stub.getState(ID))
+    return this.deserializeLog(await ctx.stub.getState(LogID))
   }
 
   @Transaction(false)
-  @Returns('string')
+  @Returns('VisitLog[]')
   async GetAllLogs (ctx: Context): Promise<VisitLog[]> {
     const results: VisitLog[] = []
 
@@ -165,6 +185,7 @@ export class Geocache extends Contract {
 
   @Transaction(false)
   @Returns('boolean')
+  @Param('LogID', 'string')
   async LogExists (ctx: Context, LogID: string): Promise<boolean> {
     const data: Uint8Array = await ctx.stub.getState(this.makeLogID(LogID))
     return data !== undefined && data.length > 0
@@ -173,6 +194,10 @@ export class Geocache extends Contract {
   // ------------- Trackables -------------
 
   @Transaction()
+  @Returns('Trackable')
+  @Param('TrackableID', 'string')
+  @Param('LogID', 'string')
+  @Param('Name', 'string')
   async CreateTrackable (ctx: Context, TrackableID: string, LogID: string, Name: string): Promise<Trackable> {
     await this.assertLogExists(ctx, LogID)
     await this.assertTrackableNotExists(ctx, TrackableID)
@@ -191,22 +216,10 @@ export class Geocache extends Contract {
     return trackable
   }
 
-  /*
-  Scenatios
-  
-  User A wants to insert trackable but new log does not exist
-  User A wants to insert trackable but the trackable does not exist
-
-  User A wants to insert trackable but the trackable is already inserted
-  
-  User A wants to insert trackable but does not own the new log
-
-  User A wants to insert trackable but the the new log is before the old log
-
-  User A wants to insert trackable but does not own the trackable
-  */
-
   @Transaction()
+  @Returns('Trackable')
+  @Param('TrackableID', 'string')
+  @Param('LogID', 'string')
   async InsertTrackable (ctx: Context, TrackableID: string, LogID: string): Promise<Trackable> {
     await this.assertLogExists(ctx, LogID)
     await this.assertTrackableExists(ctx, TrackableID)
@@ -237,21 +250,10 @@ export class Geocache extends Contract {
     return newTrackable
   }
 
-  /*
-  Scenatios
-  
-  User A wants to remove trackable but new log does not exist
-  User A wants to remove trackable but the trackable does not exist
-
-  User A wants to remove trackable but the trackable is not inserted
-  
-  User A wants to remove trackable but does not own the new log
-
-  User A wants to insert trackable but the the new log is before the old log
-
-  User A wants to remove trackable but the trackable and the new log is for different caches
-  */
   @Transaction()
+  @Returns('Trackable')
+  @Param('TrackableID', 'string')
+  @Param('LogID', 'string')
   async RemoveTrackable (ctx: Context, TrackableID: string, LogID: string): Promise<Trackable> {
     await this.assertLogExists(ctx, LogID)
     await this.assertTrackableExists(ctx, TrackableID)
@@ -284,6 +286,7 @@ export class Geocache extends Contract {
 
   @Transaction(false)
   @Returns('Trackable')
+  @Param('TrackableID', 'string')
   async GetTrackable (ctx: Context, TrackableID: string): Promise<Trackable> {
     await this.assertTrackableExists(ctx, TrackableID)
 
@@ -308,44 +311,27 @@ export class Geocache extends Contract {
 
   @Transaction(false)
   @Returns('boolean')
+  @Param('TrackableID', 'string')
   async TrackableExists (ctx: Context, TrackableID: string): Promise<boolean> {
     const data: Uint8Array = await ctx.stub.getState(this.makeTrackableID(TrackableID))
     return data !== undefined && data.length > 0
   }
-  
-  //
-  //--------------------- Admin ---------------------
-  //
-  
-  @Transaction()
-  async InitLedger (ctx: Context): Promise<string> {
-    await this.InitCaches(ctx)
-    await this.InitLogs(ctx)
-    await this.InitTrackables(ctx)
 
-    return 'Ledger initialized'
-  }
-  
   //
   //--------------------- Dev ---------------------
   //
 
   @Transaction(false)
-  async Whoami (ctx: Context): Promise<string> {
+  @Returns('string')
+  async WhoAmI (ctx: Context): Promise<string> {
     return this.getUserID(ctx)
   }
 
-  @Transaction(false)
-  async Ping (): Promise<string> {
-    return 'pong'
-  }
-
-  
   //
   //--------------------- Helper ---------------------
   //
 
-  // Permission
+  // Permissions
   private assertMaintainer (ctx: Context, id: string): void {
     if (!(this.getUserID(ctx) == id)) {
       throw new Error(`Not maintainer`)
@@ -353,14 +339,9 @@ export class Geocache extends Contract {
   }
 
   private getUserID (ctx: Context): string {
-    const user = ctx.clientIdentity.getID()
-    //ctx.clientIdentity.assertAttributeValue('role', 'admin')
-    //let regex = /\/CN=([^:]+):/;
-    //let match = JSON.stringify(user).match(regex);
-    const userid = JSON.stringify(user)
-    if (userid != "" || userid != null) {
-      //return JSON.stringify(match[1])
-      return userid.slice(1, -1)
+    const user = JSON.stringify(ctx.clientIdentity.getID())
+    if (user.slice(1, -1) != '' && user != null) {
+      return user.slice(1, -1)
     } else {
       throw new Error(`User not found!`)
     }
@@ -378,7 +359,7 @@ export class Geocache extends Contract {
     return (this.getUserID(ctx) == id)
   }
 
-  // Cache
+  // Caches
 
   private async assertCacheNotExists (ctx: Context, CacheID: string): Promise<void> {
     if (await this.CacheExists(ctx, CacheID)) {
@@ -451,106 +432,6 @@ export class Geocache extends Contract {
   private async assertTrackableExists (ctx: Context, id: string): Promise<void> {
     if (!(await this.TrackableExists(ctx, id))) {
       throw new Error(`Trackable ${id} does not exist`)
-    }
-  }
-
-  // Inits
-  async InitCaches (ctx: Context): Promise<void> {
-    const caches: Cache[] = [
-      {
-        ID: 'cache1',
-        Name: 'First Cache',
-        Description: 'This is the first cache ever!',
-        GPSX: 12,
-        GPSY: 36,
-        Report: "",
-        Pass: "CachePass123",
-        Maintainer: '\"admin\"'
-      },
-      {
-        ID: 'cache2',
-        Name: 'Second Cache',
-        Description: 'This is the second cache ever!',
-        GPSX: 69,
-        GPSY: 420,
-        Report: "",
-        Pass: "asd123",
-        Maintainer: 'Gaspacchio'
-      },
-      {
-        ID: 'cache3',
-        Name: 'Third Cache',
-        Description: 'This is the third cache ever!',
-        GPSX: 11,
-        GPSY: 11,
-        Report: "",
-        Pass: "asd123",
-        Maintainer: 'Snitzel'
-      },
-    ]
-
-    for (const cache of caches) {
-      await ctx.stub.putState(this.makeCacheID(cache.ID), this.serializeCache(cache))
-      console.info(`Cache ${cache.ID} initialized`)
-    }
-  }
-
-  async InitLogs (ctx: Context): Promise<void> {
-    const logs: VisitLog[] = [
-      {
-        ID: 'log1',
-        Trackables: ["trackable1-IN"],
-        User: '\"admin\"',
-        Cache: 'cache1',
-        Time: new Date().toISOString()
-      },
-      {
-        ID: 'log2',
-        Trackables: ["trackable2-IN"],
-        User: 'user2',
-        Cache: 'cache2',
-        Time: new Date().toISOString()
-      },
-      {
-        ID: 'log3',
-        Trackables: ["trackable3-IN"],
-        User: 'user3',
-        Cache: 'cache3',
-        Time: new Date().toISOString()
-      },
-    ]
-
-    for (const log of logs) {
-      await ctx.stub.putState(this.makeLogID(log.ID), this.serializeLog(log))
-      console.info(`Log ${log.ID} initialized`)
-    }
-  }
-
-  async InitTrackables (ctx: Context): Promise<void> {
-    const trackables: Trackable[] = [
-      {
-        ID: 'trackable1',
-        Name: 'First Trackable',
-        Inserted: true,
-        VisitLog: 'log1'
-      },
-      {
-        ID: 'trackable2',
-        Name: 'Second Trackable',
-        Inserted: true,
-        VisitLog: 'log2'
-      },
-      {
-        ID: 'trackable3',
-        Name: 'Third Trackable',
-        Inserted: true,
-        VisitLog: 'log3'
-      },
-    ]
-
-    for (const trackable of trackables) {
-      await ctx.stub.putState(this.makeTrackableID(trackable.ID), this.serializeTrackable(trackable))
-      console.info(`Trackable ${trackable.ID} initialized`)
     }
   }
 }

@@ -32,7 +32,6 @@ class ContextMock implements Context {
 
     // Mock methods for user attributes
     this.clientIdentity.getID.returns('UserID-123'); // Mock User ID
-    this.clientIdentity.getAttributeValue.withArgs('role').returns('user'); // Mock user role
   }
 }
 
@@ -46,6 +45,22 @@ describe('Geocache', () => {
       contract = new Geocache()
       ctx = new ContextMock()
       ctx.stub.putState.resetHistory();
+    })
+
+    describe('User', () => {
+        it('should return the user ID', async () => {
+            const id = await contract.WhoAmI(ctx)
+        
+            expect(id).to.equal(userID)
+        })
+
+        it('should throw an error if the user is not found', async () => {
+            ctx.clientIdentity.getID.returns('')
+        
+            const fail = () => contract.WhoAmI(ctx)
+        
+            await expect(fail()).to.eventually.be.rejectedWith(`User not found!`)
+        })
     })
 
     describe('Cache', () => {
@@ -137,7 +152,7 @@ describe('Geocache', () => {
 
             describe('DeleteCache', () => {
                     
-                let mochCache: Cache = {
+                const mochCache: Cache = {
                     ID: 'cache1',
                     Name: 'Cache 1',
                     Description: 'This is cache 1',
@@ -153,9 +168,10 @@ describe('Geocache', () => {
                         Buffer.from(stringify(sortKeys(mochCache)))
                     ))
                 
-                    await contract.DeleteCache(ctx, mochCache.ID)
+                    const resp = await contract.DeleteCache(ctx, mochCache.ID)
                 
                     expect(ctx.stub.deleteState.calledOnceWithExactly(`CACHE-${mochCache.ID}`)).to.be.true
+                    expect(resp).to.be.eq(mochCache.ID)
                 })
 
                 it('should throw an error if not the maintainer tries to delete', async () => {
@@ -177,7 +193,7 @@ describe('Geocache', () => {
 
             describe('GetCachePass', () => {
 
-                let mochCache: Cache = {
+                const mochCache: Cache = {
                     ID: 'cache1',
                     Name: 'Cache 1',
                     Description: 'This is cache 1',
@@ -233,7 +249,7 @@ describe('Geocache', () => {
                 }
 
                 it('should create a new cache', async () => {
-                    await contract.CreateCache(
+                    const resp = await contract.CreateCache(
                         ctx,
                         mochCache.ID,
                         mochCache.Name,
@@ -258,6 +274,8 @@ describe('Geocache', () => {
                         `CACHE-${mochCache.ID}`,
                         Buffer.from(stringify(sortKeys(returncache))))
                     ).to.be.true
+
+                    expect(stringify(sortKeys(resp))).to.be.eq(stringify(sortKeys(returncache)))
                 })
             
                 it('should throw an error if the cache already exists', async () => {
@@ -281,7 +299,7 @@ describe('Geocache', () => {
 
             describe('GetCache', () => {
 
-                let mochCache: Cache = {
+                const mochCache: Cache = {
                     ID: 'cache1',
                     Name: 'Cache 1',
                     Description: 'This is cache 1',
@@ -426,7 +444,7 @@ describe('Geocache', () => {
 
             describe('CacheExists', () => {
 
-                let mochCache: Cache = {
+                const mochCache: Cache = {
                     ID: 'cache1',
                     Name: 'Cache 1',
                     Description: 'This is cache 1',
@@ -457,7 +475,7 @@ describe('Geocache', () => {
 
             describe('ReportCache', () => {
 
-                let mochCache: Cache = {
+                const mochCache: Cache = {
                     ID: 'cache1',
                     Name: 'Cache 1',
                     Description: 'This is cache 1',
@@ -469,27 +487,29 @@ describe('Geocache', () => {
                 }
 
                 it('should add a report to the cache', async () => {
-                ctx.stub.getState.callsFake(async () => Promise.resolve(
-                    Buffer.from(stringify(sortKeys(mochCache)))
-                ))
+                    ctx.stub.getState.callsFake(async () => Promise.resolve(
+                        Buffer.from(stringify(sortKeys(mochCache)))
+                    ))
 
-                expect(ctx.stub.putState.calledOnceWithExactly(
-                    `CACHE-${mochCache.ID}`,
-                    Buffer.from(stringify(sortKeys({ ...mochCache, Report: 'Report' })))
-                )).to.be.false
+                    expect(ctx.stub.putState.calledOnceWithExactly(
+                        `CACHE-${mochCache.ID}`,
+                        Buffer.from(stringify(sortKeys({ ...mochCache, Report: 'Report' })))
+                    )).to.be.false
 
-                await contract.ReportCache(ctx, mochCache.ID, 'Report')
-            
-                expect(ctx.stub.putState.calledOnceWithExactly(
-                    `CACHE-${mochCache.ID}`,
-                    Buffer.from(stringify(sortKeys({ ...mochCache, Report: 'Report' })))
-                )).to.be.true
+                    const resp = await contract.ReportCache(ctx, mochCache.ID, 'Report')
+                
+                    expect(ctx.stub.putState.calledOnceWithExactly(
+                        `CACHE-${mochCache.ID}`,
+                        Buffer.from(stringify(sortKeys({ ...mochCache, Report: 'Report' })))
+                    )).to.be.true
+
+                    expect(stringify(sortKeys(resp))).to.be.eq(stringify(sortKeys({ ...mochCache, Report: 'Report' })))
                 })
             
                 it('should throw an error if the cache does not exist', async () => {
-                const fail = () => contract.ReportCache(ctx, mochCache.ID, 'Report')
-            
-                await expect(fail()).to.eventually.be.rejectedWith(`Cache ${mochCache.ID} does not exist`)
+                    const fail = () => contract.ReportCache(ctx, mochCache.ID, 'Report')
+                
+                    await expect(fail()).to.eventually.be.rejectedWith(`Cache ${mochCache.ID} does not exist`)
                 })
             })
         })
@@ -498,7 +518,7 @@ describe('Geocache', () => {
     describe('Visit Log', () => {
         describe('CreateLog', () => {
 
-            let mochCache: Cache = {
+            const mochCache: Cache = {
                 ID: 'cache1',
                 Name: 'Cache 1',
                 Description: 'This is cache 1',
@@ -509,7 +529,7 @@ describe('Geocache', () => {
                 Maintainer: userID
             }
 
-            let mochLog: VisitLog = {
+            const mochLog: VisitLog = {
                 ID: 'log1',
                 Trackables: [],
                 User: userID,
@@ -582,7 +602,7 @@ describe('Geocache', () => {
 
         describe('GetLog', () => {
 
-            let mochLog: VisitLog = {
+            const mochLog: VisitLog = {
                 ID: 'log1',
                 Trackables: [],
                 User: userID,
@@ -672,7 +692,7 @@ describe('Geocache', () => {
 
                 ctx.stub.getStateByRange.returns(mockIterator)
 
-                const trackables = await contract.GetAllTrackables(ctx);
+                const trackables = await contract.GetAllLogs(ctx);
 
                 expect(trackables.length).to.equal(4);
                 expect(trackables).to.deep.equal([
@@ -702,7 +722,7 @@ describe('Geocache', () => {
 
         describe('LogExists', () => {
 
-            let mochLog: VisitLog = {
+            const mochLog: VisitLog = {
                 ID: 'log1',
                 Trackables: [],
                 User: userID,
@@ -734,14 +754,14 @@ describe('Geocache', () => {
         describe('CreateTrackable', () => {
 
             
-            let mochTrackable: Trackable = {
+            const mochTrackable: Trackable = {
                 ID: 'trackable1',
                 Name: 'CacheCoin',
                 Inserted: true,
                 VisitLog: 'log1'
             }
             
-            let mochLog: VisitLog = {
+            const mochLog: VisitLog = {
                 ID: 'log1',
                 Trackables: [],
                 User: userID,
@@ -822,7 +842,7 @@ describe('Geocache', () => {
 
         describe('GetTrackable', () => {
                 
-            let mochTrackable: Trackable = {
+            const mochTrackable: Trackable = {
                 ID: 'trackable1',
                 Name: 'CacheCoin',
                 Inserted: true,
@@ -849,28 +869,28 @@ describe('Geocache', () => {
 
         describe('GetAllTrackables', () => {
 
-            let mochTrackable1: Trackable = {
+            const mochTrackable1: Trackable = {
                 ID: 'trackable1',
                 Name: 'CacheCoin type 1',
                 Inserted: true,
                 VisitLog: 'log1'
             }
 
-            let mochTrackable2: Trackable = {
+            const mochTrackable2: Trackable = {
                 ID: 'trackable2',
                 Name: 'CacheCoin type 2',
                 Inserted: false,
                 VisitLog: 'log1'
             }
 
-            let mochTrackable3: Trackable = {
+            const mochTrackable3: Trackable = {
                 ID: 'trackable3',
                 Name: 'CacheCoin type 3',
                 Inserted: true,
                 VisitLog: 'log2'
             }
 
-            let mochTrackable4: Trackable = {
+            const mochTrackable4: Trackable = {
                 ID: 'trackable4',
                 Name: 'CacheCoin type 4',
                 Inserted: false,
@@ -937,7 +957,7 @@ describe('Geocache', () => {
 
         describe('TrackableExists', () => {
 
-            let mochTrackable: Trackable = {
+            const mochTrackable: Trackable = {
                 ID: 'trackable1',
                 Name: 'CacheCoin',
                 Inserted: true,
@@ -964,7 +984,7 @@ describe('Geocache', () => {
 
         describe('InsertTrackable', () => {
 
-            let oldMochLog: VisitLog = {
+            const oldMochLog: VisitLog = {
                 ID: 'log1',
                 Trackables: ["trackable1-OUT"],
                 User: userID,
@@ -972,7 +992,7 @@ describe('Geocache', () => {
                 Time: '2021-01-01T00:00:00Z'
             }
 
-            let newMochLog: VisitLog = {
+            const newMochLog: VisitLog = {
                 ID: 'log2',
                 Trackables: [],
                 User: userID,
@@ -980,7 +1000,7 @@ describe('Geocache', () => {
                 Time: '2021-02-01T00:00:00Z'
             }
 
-            let mochTrackable: Trackable = {
+            const mochTrackable: Trackable = {
                 ID: 'trackable1',
                 Name: 'CacheCoin',
                 Inserted: false,
@@ -1119,7 +1139,7 @@ describe('Geocache', () => {
 
         describe('RemoveTrackable', () => {
         
-            let oldMochLog: VisitLog = {
+            const oldMochLog: VisitLog = {
                 ID: 'log1',
                 Trackables: ["trackable1-IN"],
                 User: userID,
@@ -1127,7 +1147,7 @@ describe('Geocache', () => {
                 Time: '2021-01-01T00:00:00Z'
             }
 
-            let newMochLog: VisitLog = {
+            const newMochLog: VisitLog = {
                 ID: 'log2',
                 Trackables: [],
                 User: userID,
@@ -1135,7 +1155,7 @@ describe('Geocache', () => {
                 Time: '2021-02-01T00:00:00Z'
             }
 
-            let mochTrackable: Trackable = {
+            const mochTrackable: Trackable = {
                 ID: 'trackable1',
                 Name: 'CacheCoin',
                 Inserted: true,
