@@ -1,1 +1,1 @@
-# Blockchain based geoguesser application
+# Blockchain based geocaching application
