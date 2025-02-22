@@ -1,2 +1,1 @@
-# Bruncsics Bálint 
-### CQIA5X
+# Blockchain based geoguesser application
